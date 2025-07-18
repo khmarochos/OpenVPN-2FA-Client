@@ -12,6 +12,36 @@ import getpass
 from pathlib import Path
 
 
+# Configuration defaults
+DEFAULT_VPN_SERVER = "openvpn.example.org"
+DEFAULT_VPN_USER = "user"
+DEFAULT_CREDENTIALS_DIR = "~/.openvpn"
+DEFAULT_CONFIG_DIRS = [
+    "~/.openvpn",
+    "/etc/openvpn/client"
+]
+
+
+def get_default_paths(server=None, username=None):
+    """Generate default file paths based on server and username."""
+    server = server or DEFAULT_VPN_SERVER
+    username = username or DEFAULT_VPN_USER
+    
+    # Default credentials file path
+    credentials_file = f"{DEFAULT_CREDENTIALS_DIR}/{username}@{server}_credentials.txt"
+    
+    # Default config file paths to search
+    config_paths = []
+    for config_dir in DEFAULT_CONFIG_DIRS:
+        config_paths.extend([
+            f"{config_dir}/{username}@{server}.ovpn",
+            f"{config_dir}/{server}/{username}.ovpn",
+            f"{config_dir}/{server}.ovpn"
+        ])
+    
+    return credentials_file, config_paths
+
+
 def totp_now(secret_b32: str, digits: int = 6, step: int = 30) -> str:
     """Return the current TOTP code for *secret_b32* (Base-32)."""
     # Decode (ignore case and whitespace per RFC 3548 §6).
@@ -67,20 +97,19 @@ def update_credentials_file(secret, name, pin, target):
     return target
 
 
-def run_openvpn_loop(secret, name, pin, config_file=None, credentials_file=None):
+def run_openvpn_loop(secret, name, pin, config_file=None, credentials_file=None, server=None, username=None):
     """Run OpenVPN in a loop, regenerating TOTP codes as needed."""
+    default_credentials_file, default_config_paths = get_default_paths(server, username)
+    
     if credentials_file is None:
-        credentials_file = Path("~/.openvpn/user@openvpn.example.org_credentials.txt").expanduser()
+        credentials_file = Path(default_credentials_file).expanduser()
     else:
         credentials_file = Path(credentials_file).expanduser()
     
     # Determine OpenVPN config file
     if config_file is None:
         # Try to find a config file
-        possible_configs = [
-            Path("~/.openvpn/user@openvpn.example.org.ovpn").expanduser(),
-            Path("/etc/openvpn/client/openvpn.example.org/user.ovpn"),
-        ]
+        possible_configs = [Path(path).expanduser() for path in default_config_paths]
         
         for config in possible_configs:
             if config.exists():
@@ -165,8 +194,18 @@ def main() -> None:
     )
     parser.add_argument(
         "--credentials-file", "-f",
-        help="Path to credentials file (default: ~/.openvpn/user@openvpn.example.org_credentials.txt)",
+        help="Path to credentials file (default: auto-generated based on server/username)",
         default=os.getenv("OPENVPN_CREDENTIALS_FILE")
+    )
+    parser.add_argument(
+        "--server", "-s",
+        help="VPN server hostname (default: openvpn.example.org)",
+        default=os.getenv("OPENVPN_SERVER", DEFAULT_VPN_SERVER)
+    )
+    parser.add_argument(
+        "--username", "-u",
+        help="VPN username (default: user)",
+        default=os.getenv("OPENVPN_USERNAME", DEFAULT_VPN_USER)
     )
     parser.add_argument(
         "--once", "-1",
@@ -184,12 +223,13 @@ def main() -> None:
         if args.credentials_file:
             target = Path(args.credentials_file).expanduser()
         else:
-            target = Path("~/.openvpn/user@openvpn.example.org_credentials.txt").expanduser()
+            default_credentials_file, _ = get_default_paths(args.server, args.username)
+            target = Path(default_credentials_file).expanduser()
         update_credentials_file(secret, name, pin, target)
         print(f"✓ Credentials written to {target}")
     else:
         # Run OpenVPN in a loop
-        run_openvpn_loop(secret, name, pin, args.config, args.credentials_file)
+        run_openvpn_loop(secret, name, pin, args.config, args.credentials_file, args.server, args.username)
 
 
 if __name__ == "__main__":

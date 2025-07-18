@@ -35,6 +35,16 @@ A Python utility that automatically generates TOTP (Time-based One-Time Password
 ./openvpn.py --config /path/to/your/config.ovpn
 ```
 
+### With Custom Server/Username
+```bash
+./openvpn.py --server company.vpn --username john
+```
+
+### With Custom Credentials File
+```bash
+./openvpn.py --credentials-file /path/to/credentials.txt
+```
+
 ### Generate Credentials Only
 ```bash
 ./openvpn.py --once
@@ -44,25 +54,49 @@ A Python utility that automatically generates TOTP (Time-based One-Time Password
 
 You can set these environment variables to avoid interactive prompts:
 
+### Authentication Variables
 - `TOTP_KEY`: Your Base32 TOTP secret key
 - `AUTH_NAME`: Your username
 - `AUTH_PIN`: Your PIN/password
+
+### Configuration Variables
+- `OPENVPN_SERVER`: VPN server hostname (default: openvpn.example.org)
+- `OPENVPN_USERNAME`: VPN username (default: user)
+- `OPENVPN_CREDENTIALS_FILE`: Path to credentials file (overrides auto-generated path)
 
 Example:
 ```bash
 export TOTP_KEY="JBSWY3DPEHPK3PXP"
 export AUTH_NAME="myusername"
 export AUTH_PIN="mypin"
+export OPENVPN_SERVER="company.vpn"
+export OPENVPN_USERNAME="john"
 ./openvpn.py
 ```
 
 ## Configuration
 
-The script will automatically look for OpenVPN configuration files in these locations:
-- `~/.openvpn/user@openvpn.example.org.ovpn`
-- `/etc/openvpn/client/openvpn.example.org/user.ovpn`
+The script automatically generates file paths based on the server and username:
 
-Credentials are written to: `~/.openvpn/user@openvpn.example.org_credentials.txt`
+### Default Paths
+- Server: `openvpn.example.org` (configurable with `--server` or `OPENVPN_SERVER`)
+- Username: `user` (configurable with `--username` or `OPENVPN_USERNAME`)
+
+### Configuration File Search Order
+The script searches for OpenVPN config files in this order:
+1. `~/.openvpn/{username}@{server}.ovpn`
+2. `~/.openvpn/{server}/{username}.ovpn`
+3. `~/.openvpn/{server}.ovpn`
+4. `/etc/openvpn/client/{username}@{server}.ovpn`
+5. `/etc/openvpn/client/{server}/{username}.ovpn`
+6. `/etc/openvpn/client/{server}.ovpn`
+
+### Credentials File Location
+Default: `~/.openvpn/{username}@{server}_credentials.txt`
+
+### Examples
+- With defaults: `~/.openvpn/user@openvpn.example.org_credentials.txt`
+- With custom settings: `~/.openvpn/john@company.vpn_credentials.txt`
 
 ## Security
 
@@ -73,6 +107,9 @@ Credentials are written to: `~/.openvpn/user@openvpn.example.org_credentials.txt
 ## Command Line Options
 
 - `--config`, `-c`: Specify OpenVPN configuration file path
+- `--credentials-file`, `-f`: Specify credentials file path (overrides auto-generated path)
+- `--server`, `-s`: VPN server hostname (default: openvpn.example.org)
+- `--username`, `-u`: VPN username (default: user)
 - `--once`, `-1`: Generate credentials file once and exit (don't run OpenVPN)
 - `--help`: Show help message
 
