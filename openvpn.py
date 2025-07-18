@@ -67,9 +67,12 @@ def update_credentials_file(secret, name, pin, target):
     return target
 
 
-def run_openvpn_loop(secret, name, pin, config_file=None):
+def run_openvpn_loop(secret, name, pin, config_file=None, credentials_file=None):
     """Run OpenVPN in a loop, regenerating TOTP codes as needed."""
-    credentials_file = Path("~/.openvpn/user@openvpn.example.org_credentials.txt").expanduser()
+    if credentials_file is None:
+        credentials_file = Path("~/.openvpn/user@openvpn.example.org_credentials.txt").expanduser()
+    else:
+        credentials_file = Path(credentials_file).expanduser()
     
     # Determine OpenVPN config file
     if config_file is None:
@@ -161,6 +164,11 @@ def main() -> None:
         default=None
     )
     parser.add_argument(
+        "--credentials-file", "-f",
+        help="Path to credentials file (default: ~/.openvpn/user@openvpn.example.org_credentials.txt)",
+        default=os.getenv("OPENVPN_CREDENTIALS_FILE")
+    )
+    parser.add_argument(
         "--once", "-1",
         action="store_true",
         help="Only generate credentials file once and exit (don't run OpenVPN)"
@@ -173,11 +181,15 @@ def main() -> None:
     
     if args.once:
         # Just generate the credentials file and exit
-        target = update_credentials_file(secret, name, pin)
+        if args.credentials_file:
+            target = Path(args.credentials_file).expanduser()
+        else:
+            target = Path("~/.openvpn/user@openvpn.example.org_credentials.txt").expanduser()
+        update_credentials_file(secret, name, pin, target)
         print(f"✓ Credentials written to {target}")
     else:
         # Run OpenVPN in a loop
-        run_openvpn_loop(secret, name, pin, args.config)
+        run_openvpn_loop(secret, name, pin, args.config, args.credentials_file)
 
 
 if __name__ == "__main__":
