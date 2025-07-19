@@ -113,6 +113,36 @@ Default: `~/.openvpn/{username}@{server}_credentials.txt`
 - `--once`, `-1`: Generate credentials file once and exit (don't run OpenVPN)
 - `--help`: Show help message
 
+## Testing
+
+The project includes comprehensive tests to ensure reliability and security.
+
+### Running Tests
+
+```bash
+# Run all tests
+python3 test_openvpn.py
+
+# Or use the test runner for better output
+./run_tests.py
+```
+
+### Test Coverage
+
+The test suite covers:
+
+- **TOTP Functionality**: Validates TOTP code generation, time-based changes, case insensitivity, and space handling
+- **Input Validation**: Tests validation of TOTP secrets, usernames, and PINs with both valid and invalid inputs  
+- **File Operations**: Verifies secure file creation, permissions (600), parent directory creation, and error handling
+- **Path Generation**: Tests default path generation with various server/username combinations
+- **Security Features**: Tests sensitive data clearing functionality
+- **Main Functions**: Integration tests for command-line modes, retry logic, and OpenVPN execution
+- **Error Handling**: Validates proper handling of invalid inputs and system errors
+
+### Test Requirements
+
+Tests use Python's built-in `unittest` framework and require no additional dependencies. All tests use mocking to avoid external dependencies and ensure consistent, fast execution.
+
 ## How It Works
 
 1. Prompts for or reads TOTP secret, username, and PIN
